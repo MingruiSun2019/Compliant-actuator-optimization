@@ -12,8 +12,8 @@ class Params():
         elif choice == "user_defined":
             self._load_params("inputs.user_inputs")
 
-    def _load_params(module_name):
+    def _load_params(self, module_name):
         pkg = importlib.import_module(module_name)
         self.stiffness_lower = pkg.STIFFNESS_LOWER
         self.stiffness_upper = pkg.STIFFNESS_UPPER
-        self.stiffness_interval =
+        self.stiffness_interval = pkg.STIFFNESS_INTERVAL
