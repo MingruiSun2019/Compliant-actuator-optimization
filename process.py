@@ -3,17 +3,27 @@ Collects all steps for this software
 """
 from .lib.utils import *
 from .lib.parameter_loader import Params
+from .lib.human_data_processing import HumanData
 
 Q1_dict = {"y": "default", "n": "user_defined"}
 
 
-def process():
+def process(actuator):
     # Select if using default parameters or user defined
     question_txt = "Do you want to use default parameters(y) or user defined(n)?"
     ans = ask_answer(question_txt)
     params = Params(Q1_dict[ans])
 
+    # Load human data
+    human_data = HumanData()
+    human_data.assign_weights()
+
+    # Calculate motor behavior
+
+
     # Do optimization using 4QCI model
+
+
     # return n opt points
 
     # Generate recommended variable range
