@@ -22,3 +22,8 @@ class Params():
         self.gear_ratio_lower = pkg.GEAR_RATIO_LOWER
         self.gear_ratio_upper = pkg.GEAR_RATIO_UPPER
         self.gear_ratio_interval = pkg.GEAR_RATIO_INTERVAL
+        self.motor_j_lower = pkg.MOTOR_INERTIA_UPPER
+        self.motor_j_upper = pkg.MOTOR_INERTIA_LOWER
+        self.motor_j_interval = pkg.MOTOR_INERTIA_INTERVAL
+        self.v_limit = pkg.DRIVER_VOLTAGE_LIMIT
+        self.c_limit = pkg.DRIVER_CURRENT_LIMIT

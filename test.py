@@ -1,4 +1,5 @@
-import importlib
+import pandas as pd
 
-pkgg = importlib.import_module("inputs.default_inputs")
-print(pkgg.STIFFNESS_LOWER)
+catalog = pd.read_csv("./catalog/Gear_catalog_user_defined.csv")
+for index, row in catalog.iterrows():
+    print(row['Name'], row['ratio'], row['eff'])
