@@ -8,6 +8,7 @@ from lib.human_data_processing import HumanData
 from models.actuator.sea_type1 import SeaType1
 from models.energy.model_4qci import Optimize4QCI
 from models.energy.model_fmm import OptimizeFMM
+from dashboard.dash_main import generate_app_layout
 
 
 Q1_dict = {"y": "default", "n": "user_defined"}
@@ -61,21 +62,23 @@ def process():
     print("Do optimization with FMM model")
     ranked_comb_info = energy_model_fmm.optimize_routine()
     print(ranked_comb_info)
+    save_ranked_combs(ranked_comb_info, "results/all_ranked_comb.csv")
 
     # User input performance tolerance
-    question_txt = "Torque rating (0-1)?"
-    user_torque_rating = ask_answer(question_txt)
-    question_txt = "Speed rating (0-1)?"
-    user_speed_rating = ask_answer(question_txt)
+    # question_txt = "Torque rating (0-1)?"
+    # user_torque_rating = ask_answer(question_txt)
+    # question_txt = "Speed rating (0-1)?"
+    # user_speed_rating = ask_answer(question_txt)
 
     # Output filtered combinations with energy consumption and
     # performance rating
-    filtered_comb = [x for x in ranked_comb_info if x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
-    print("Selected combination:")
-    print(filtered_comb)
+    # filtered_comb = [x for x in ranked_comb_info if x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
+    # print("Selected combination:")
+    # print(filtered_comb)
 
     # Select if want visualization
-
+    dash_app = generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator)
+    dash_app.run_server(debug=False)
 
     # Visualization
 

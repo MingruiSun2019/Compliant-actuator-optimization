@@ -13,6 +13,8 @@ class HumanData():
         self.params = params
         self.angle_path = "human_data/angle/"
         self.torque_path = "human_data/torque/"
+        self.angle_files = None
+        self.torque_files = None
         self.angle_data = []
         self.torque_data = []
         self.weights = []

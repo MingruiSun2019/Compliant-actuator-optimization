@@ -11,10 +11,34 @@ class SeaType1(BaseModel):
     def __init__(self, params, polyfitor):
         super().__init__(params, polyfitor)
         self._acc_torque = None
-        self._des_motor_speed = None
+        self.des_motor_speed = None  # done
+        self.des_motor_torque = None  # done
+        self.actual_motor_speed = None  # done
+        self.actual_motor_torque = None  # done
+        self.des_output_torque = None  # done
+        self.actual_output_torque = None  # done
         self._actual_gear_eff = None
+        self.input_voltage = None  # done
+        self.input_current = None  # done
+        self.mechanical_power = None
+        self.electrical_power = None
+
+    def initialize(self):
+        self._acc_torque = None
+        self.des_motor_speed = None  # done
+        self.des_motor_torque = None  # done
+        self.actual_motor_speed = None  # done
+        self.actual_motor_torque = None  # done
+        self.des_output_torque = None  # done
+        self.actual_output_torque = None  # done
+        self._actual_gear_eff = None
+        self.input_voltage = None  # done
+        self.input_current = None  # done
+        self.mechanical_power = None
+        self.electrical_power = None
 
     def _get_motor_behavior(self, stiffness, ratio, des_torque, des_angle, time_series):
+        self.des_output_torque = des_torque
         stiffness = stiffness * np.pi / 180  # Nm/deg
         time_step = time_series[1] - time_series[0]
 
@@ -24,7 +48,7 @@ class SeaType1(BaseModel):
         motor_angle = mid_angle * ratio  # (deg)
         motor_speed = np.diff(motor_angle) / time_step * 60 / 360  # (rpm)
         motor_speed = np.append(motor_speed, motor_speed[-1])
-        self._des_motor_speed = motor_speed
+        self.des_motor_speed = motor_speed
 
         # Calculate motor acceleration by poly fit motor angle and double differentiate, so that no noise be introduced
         motor_angle_rad = motor_angle * np.pi / 180  # (rad)
@@ -55,6 +79,7 @@ class SeaType1(BaseModel):
                 actual_motor_eff[i] = 1 / self.params.motor_eff_c
             motor_torque[i] = (des_torque[i] / ratio) / actual_gear_eff + acc_torque[i]
 
+        self.des_motor_torque = motor_torque
         return motor_angle, motor_speed, motor_torque, actual_motor_eff
 
     def backward_calculation_fmm(self, stiffness, gear, motor, des_torque, des_angle, time_series):
@@ -79,7 +104,7 @@ class SeaType1(BaseModel):
             else:
                 self._actual_gear_eff[i] = 1 / self.params.gear_eff_c
         motor_torque = (des_torque / ratio) / self._actual_gear_eff + acc_torque + friction_torque
-
+        self.des_motor_torque = motor_torque
         return motor_angle, motor_speed, motor_torque
 
     def apply_voltage_current_limit(self, motor_torque, motor_speed, motor):
@@ -98,6 +123,8 @@ class SeaType1(BaseModel):
 
         actual_motor_speed = np.clip(motor_speed, a_min=-speed_limit, a_max=speed_limit)
 
+        self.actual_motor_speed = actual_motor_speed
+        self.actual_motor_torque = actual_motor_torque
         return actual_motor_torque, actual_motor_speed
 
     def get_motor_inputs(self, actual_motor_torque, actual_motor_speed, motor):
@@ -109,6 +136,8 @@ class SeaType1(BaseModel):
                                 a_min=-self.params.c_limit, a_max=self.params.c_limit)
         input_voltage = np.clip((actual_motor_speed + temp_k * actual_motor_torque * 1000) / speed_constant,
                                 a_min=-self.params.v_limit, a_max=self.params.v_limit)
+        self.input_current = input_current
+        self.input_voltage = input_voltage
         return input_voltage, input_current
 
     def forward_calculation(self, actual_motor_torque, gear, motor):
@@ -119,17 +148,32 @@ class SeaType1(BaseModel):
         ratio = gear['ratio']
         friction_torque = motor['Mr']
         actual_output_torque = (actual_motor_torque - self._acc_torque - friction_torque) * ratio * self._actual_gear_eff
+        self.actual_output_torque = actual_output_torque
         return actual_output_torque
 
     def get_performance_rating(self, actual_output_torque, actual_motor_speed, des_output_torque):
         max_des_torque = np.max(des_output_torque)
         max_torque_deviation = max_des_torque * 0.02
-        max_des_motor_speed = np.max(self._des_motor_speed)
+        max_des_motor_speed = np.max(self.des_motor_speed)
         max_speed_deviation = max_des_motor_speed * 0.02
         data_len = len(des_output_torque)
         torque_rating = np.sum(np.abs(actual_output_torque-des_output_torque) < max_torque_deviation) / data_len   # 0-1, higher better
-        speed_rating = np.sum(np.abs(actual_motor_speed-self._des_motor_speed) < max_speed_deviation) / data_len   # 0-1, higher better
+        speed_rating = np.sum(np.abs(actual_motor_speed-self.des_motor_speed) < max_speed_deviation) / data_len   # 0-1, higher better
         # TODO: UI rating
 
         return torque_rating, speed_rating
+
+    def get_powers(self):
+        """
+        Get mechanical power and electrical power
+        """
+        self.mechanical_power = self.actual_motor_torque * self.actual_motor_speed / 60 * np.pi
+        self.electrical_power = self.input_voltage * self.input_current
+
+    def gather_info(self, stiffness, gear, motor, des_torque, des_angle, time_series):
+        motor_angle, motor_speed, motor_torque = self.backward_calculation_fmm(stiffness, gear, motor, des_torque, des_angle, time_series)
+        actual_motor_torque, actual_motor_speed = self.apply_voltage_current_limit(motor_torque, motor_speed, motor)
+        input_voltage, input_current = self.get_motor_inputs(actual_motor_torque, actual_motor_speed, motor)
+        actual_output_torque = self.forward_calculation(actual_motor_torque, gear, motor)
+
 

@@ -5,9 +5,4 @@ import numpy as np
 #for index, row in catalog.iterrows():
 #    print(row['Name'], row['ratio'], row['eff'])
 
-time_series = np.linspace(0, 0.0114*100, 100)
-print(time_series)
-print(len(time_series))
-df = pd.DataFrame(time_series, columns=["Time"])
-df.to_csv("./test.csv")
-# TODO: torque do per kg, add body weight
+
