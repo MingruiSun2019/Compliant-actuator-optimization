@@ -1,4 +1,4 @@
-from _base import EnergyModelBase
+from ._base import EnergyModelBase
 import numpy as np
 
 
@@ -17,7 +17,8 @@ class Optimize4QCI(EnergyModelBase):
             for ratio in ratio_iter:
                 for m_inertia in motor_inertia_iter:
                     sum_energy = 0   # sum of electrical energy over all activities
-                    for activity_w, activity_i in enumerate(self.huaman_data.weights):
+                    for activity_i, activity_w in enumerate(self.human_data.weights):
+                        activity_w = float(activity_w)
                         des_torque, des_angle, time_series, time_step = self.load_human_data(activity_i)
                         motor_behavior = self.actuator.backward_calculation_4qci(stiffness=stiffness,
                                                                                  ratio=ratio,
@@ -28,8 +29,9 @@ class Optimize4QCI(EnergyModelBase):
                         motor_angle, motor_speed, motor_torque, actual_motor_eff = motor_behavior
 
                         mechanical_power = motor_speed / 60 * np.pi * motor_torque  # speed (rpm) to (rad/s)
-                        mechanical_energy = np.sum(mechanical_power) * time_step
-                        electrical_energy = mechanical_energy * actual_motor_eff  # depend on direction of power flow
+                        electrical_power = mechanical_power / actual_motor_eff
+                        # mechanical_energy = np.sum(mechanical_power) * time_step
+                        electrical_energy = np.sum(electrical_power) * time_step  # depend on direction of power flow
                         sum_energy += electrical_energy * activity_w
 
                     comb_info = {"energy": sum_energy, "stiffness": stiffness, "ratio": ratio, "m_inertia": m_inertia}

@@ -1,7 +1,7 @@
 import os
 
 
-def ActuatorBase():
+class ActuatorBase():
     """
     Explain base here
     """

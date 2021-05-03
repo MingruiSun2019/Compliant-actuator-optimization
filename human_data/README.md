@@ -2,6 +2,8 @@
 This folder should only contain .csv human joint data
 User needs to make sure the filenames in /angle and /torque match exactly
     also make sure they are of the same length
+    
+Torque data should be per kg data
 
 Format:
 Time      Data 

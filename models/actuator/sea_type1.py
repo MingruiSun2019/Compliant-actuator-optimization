@@ -2,7 +2,7 @@ import os
 from ._base import ActuatorBase as BaseModel
 import numpy as np
 
-
+print(type(BaseModel))
 class SeaType1(BaseModel):
     """
     Motor -> Gear -> Spring -> output
@@ -10,7 +10,9 @@ class SeaType1(BaseModel):
 
     def __init__(self, params, polyfitor):
         super().__init__(params, polyfitor)
-        # TODO: put actual gear motor here
+        self._acc_torque = None
+        self._des_motor_speed = None
+        self._actual_gear_eff = None
 
     def _get_motor_behavior(self, stiffness, ratio, des_torque, des_angle, time_series):
         stiffness = stiffness * np.pi / 180  # Nm/deg
@@ -22,6 +24,7 @@ class SeaType1(BaseModel):
         motor_angle = mid_angle * ratio  # (deg)
         motor_speed = np.diff(motor_angle) / time_step * 60 / 360  # (rpm)
         motor_speed = np.append(motor_speed, motor_speed[-1])
+        self._des_motor_speed = motor_speed
 
         # Calculate motor acceleration by poly fit motor angle and double differentiate, so that no noise be introduced
         motor_angle_rad = motor_angle * np.pi / 180  # (rad)
@@ -62,20 +65,20 @@ class SeaType1(BaseModel):
         # Read component parameters
         ratio, gear_eff, gear_inertia = gear['ratio'], gear['eff'], gear['inertia']
         motor_inertia, friction_torque = motor['Jr'], motor['Mr']
-
         motor_angle, motor_speed, motor_acc = self._get_motor_behavior(stiffness, ratio,
                                                                        des_torque, des_angle, time_series)
 
         acc_torque = (motor_inertia + gear_inertia) / 1e7 * motor_acc  # torque for accelerate the rotor itself
+        self._acc_torque = acc_torque
 
         # HD_eff = get_hd_eff(hd, motor_speed)
-        motor_torque = np.zeros(len(motor_speed))
+        self._actual_gear_eff = np.zeros(len(motor_speed))
         for i in range(len(motor_speed)):
             if motor_speed[i] * des_torque[i] >= 0:
-                actual_gear_eff = gear_eff
+                self._actual_gear_eff[i] = gear_eff
             else:
-                actual_gear_eff = 1 / self.params.gear_eff_c
-            motor_torque[i] = (des_torque[i] / ratio) / actual_gear_eff + acc_torque[i] + friction_torque
+                self._actual_gear_eff[i] = 1 / self.params.gear_eff_c
+        motor_torque = (des_torque / ratio) / self._actual_gear_eff + acc_torque + friction_torque
 
         return motor_angle, motor_speed, motor_torque
 
@@ -98,7 +101,6 @@ class SeaType1(BaseModel):
         return actual_motor_torque, actual_motor_speed
 
     def get_motor_inputs(self, actual_motor_torque, actual_motor_speed, motor):
-        # TODO: torque_limit other thins
         torque_constant = motor['km']
         speed_constant = motor['kn']
         windingR = motor['Rw']
@@ -109,9 +111,25 @@ class SeaType1(BaseModel):
                                 a_min=-self.params.v_limit, a_max=self.params.v_limit)
         return input_voltage, input_current
 
-    def forward_calculation(self):
+    def forward_calculation(self, actual_motor_torque, gear, motor):
         """
         Calculate actual output angle, speed, torque
         given actual motor angle, speed, torque
         """
-        pass
+        ratio = gear['ratio']
+        friction_torque = motor['Mr']
+        actual_output_torque = (actual_motor_torque - self._acc_torque - friction_torque) * ratio * self._actual_gear_eff
+        return actual_output_torque
+
+    def get_performance_rating(self, actual_output_torque, actual_motor_speed, des_output_torque):
+        max_des_torque = np.max(des_output_torque)
+        max_torque_deviation = max_des_torque * 0.02
+        max_des_motor_speed = np.max(self._des_motor_speed)
+        max_speed_deviation = max_des_motor_speed * 0.02
+        data_len = len(des_output_torque)
+        torque_rating = np.sum(np.abs(actual_output_torque-des_output_torque) < max_torque_deviation) / data_len   # 0-1, higher better
+        speed_rating = np.sum(np.abs(actual_motor_speed-self._des_motor_speed) < max_speed_deviation) / data_len   # 0-1, higher better
+        # TODO: UI rating
+
+        return torque_rating, speed_rating
+
