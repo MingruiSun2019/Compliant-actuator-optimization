@@ -73,6 +73,9 @@ def process():
     print("Do optimization with FMM model")
     ranked_comb_info = energy_model_fmm.optimize_routine()
     print(ranked_comb_info)
+    filtered_comb = [x for x in ranked_comb_info if
+                     x["T_rating"] >= 0.8 and x["V_rating"] >= 0.8]
+    filtered_comb = pd.DataFrame(filtered_comb)
 
     # User input performance tolerance
     # question_txt = "Torque rating (0-1)?"
@@ -87,7 +90,7 @@ def process():
     # print(filtered_comb)
 
     # Select if want visualization
-    dash_app, output_list, input_list = generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator)
+    dash_app, output_list, input_list, input_datatable, output_datatable = generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator, filtered_comb)
     num_activity = len(human_data.weights)
 
     @dash_app.callback(output_list, input_list)
@@ -109,6 +112,13 @@ def process():
             all_figs += list(output_figs)
 
         return all_figs
+
+    @dash_app.callback(output_datatable, input_datatable)
+    def update_graph(user_torque_rating, user_speed_rating):
+        filtered_comb = [x for x in ranked_comb_info if
+                         x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
+        table_data = pd.DataFrame(filtered_comb)  # Only take the top 10
+        return [table_data.to_dict('records')]
 
     dash_app.run_server(debug=False)
 

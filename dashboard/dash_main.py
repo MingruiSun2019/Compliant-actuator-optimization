@@ -96,20 +96,20 @@ def generate_ts_ta_graphs(text_id1=None, num_act=7, settings=None):
 
     return all_comp
 
-
-def generate_table(text_id1=None, data=None, settings=None):
+def generate_table(text_id1=None, data=None):
+    column_names = ["energy", "stiffness", "gear_id", "motor_id", "T_rating", "V_rating"]
     single_comp = dash_table.DataTable(
         id=text_id1,
-        columns=[{"name": i, "id": i} for i in data.columns],
-        data=data.to_dict('records'),
+        columns=[{"name": i, "id": i} for i in column_names],
+        data=data.to_dict("record"),
         style_cell={
-            'backgroundColor': settings["Plot_color"],
+            'backgroundColor': "blue",
             'color': "#f3f5f4"})
 
     return single_comp
 
 
-def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator):
+def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator, table_data):
     My_settings = {
         "Deactive_color": "#19aae1",
         "Active_color": '#ffa500',
@@ -120,6 +120,7 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
         "grid_color": '#476293',
         "margin_left": "1.6vw"
     }
+    Gear_list = pd.read_csv("catalog/Gear_catalog_user_defined.csv")
 
     num_activity = len(human_data.weights)
 
@@ -135,14 +136,10 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
 
                 # 0th row
                 html.Div(children=[
-                    html.P(id = 'text0', children='Actuator optimization - by Mingrui and Tomislav'),
-                    html.P(id='text09', children="Bodyweight: 90kg")
+                    html.P(id = 'text0', children='Actuator optimization')
                 ], className='row', style={'fontColor': 'white'}),
 
-                # select row
-                html.Div(children=[
-                    html.Br()] + generate_text_slide_bar(text_id="rating_title{}", silder_id="rating_slider{}", stat_id="rating_slider_output_container{}", num_rating=num_activity),
-                    className='row', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw', 'margin-right': '3vw', 'margin-top': '1vw'}),
+
 
 
                 # first row
@@ -150,27 +147,6 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                     html.Br()] + generate_activity(text_id="act_title{}", activity_titles=human_data.angle_files, num_act=num_activity),
                     className='row', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw', 'margin-right': '3vw', 'margin-top': '1vw'}),
 
-                # second row
-                html.Div(children=[
-                    html.Div(children=[
-                        html.P(id='Combination_txt', children='Combination'),
-                        dcc.Dropdown(id='Combination',
-                                     options=[
-                                        {'label': 'C1', 'value': 'C1'},
-                                        {'label': 'C2', 'value': 'C2'},
-                                        {'label': 'C3', 'value': 'C3'},
-                                        {'label': 'C4', 'value': 'C4'},
-                                        {'label': 'C5', 'value': 'C5'},
-                                        {'label': 'C6', 'value': 'C6'},
-                                        {'label': 'C7', 'value': 'C7'},
-                                        {'label': 'C8', 'value': 'C8'},
-                                         {'label': 'C9', 'value': 'C9'},
-                                         {'label': 'C10', 'value': 'C10'}
-                                     ],
-                                     value="C1",
-                                     style={"color": "#212121"}),
-                    ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '3vw', 'margin-top': '1vw'})],
-                       className='row'),
 
                 # sixth row
                 html.Div(children=[
@@ -215,6 +191,44 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
 
         # right-side column
 
+        html.Div(style={'display': 'inline-block', 'background-color': '#192444', 'vertical-align': 'top',
+                        'margin-left': '1vw', 'margin-right': '1vw', 'margin-top': '3vw'},
+                 children=[
+
+                     html.Div(children=[
+                                           html.Br()] + [html.Div(children=[
+                         html.P(id='Combination_txt', children='Combination'),
+                         dcc.Dropdown(id='Combination',
+                                      options=[
+                                          {'label': 'C1', 'value': 'C1'},
+                                          {'label': 'C2', 'value': 'C2'},
+                                          {'label': 'C3', 'value': 'C3'},
+                                          {'label': 'C4', 'value': 'C4'},
+                                          {'label': 'C5', 'value': 'C5'},
+                                          {'label': 'C6', 'value': 'C6'},
+                                          {'label': 'C7', 'value': 'C7'},
+                                          {'label': 'C8', 'value': 'C8'},
+                                          {'label': 'C9', 'value': 'C9'},
+                                          {'label': 'C10', 'value': 'C10'}
+                                      ],
+                                      value="C1",
+                                      style={"color": "#212121"}),
+                     ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '3vw',
+                               'margin-top': '1vw'})]
+                                       + generate_text_slide_bar(text_id="rating_title{}", silder_id="rating_slider{}",
+                                                                 stat_id="rating_slider_output_container{}",
+                                                                 num_rating=num_activity),
+                              className='row',
+                              style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw',
+                                     'margin-right': '3vw', 'margin-top': '1vw'}),
+
+                     html.Div(style={'background-color': '#192444'},
+                              children=[
+                                  html.P(id='table_title2', children='Gear-list'),
+                                  generate_table(text_id1="filtered_comb_table", data=table_data)
+                              ])
+                 ]),
+
     ])
 
     # Callbacks
@@ -241,7 +255,14 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
         Output(component_id='Act2_vc', component_property='figure')
     ]
 
-    return app, output_list, input_list
+    input_datatable = [
+                  Input(component_id='rating_slider1', component_property='value'),
+                  Input(component_id='rating_slider2', component_property='value')]
+
+    output_datatable = [
+        Output(component_id='filtered_comb_table', component_property='data')]
+
+    return app, output_list, input_list, input_datatable, output_datatable
 
 
 def get_dash_plots(actuator, motor, settings):
