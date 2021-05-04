@@ -6,7 +6,7 @@ class Polyfitor():
     This class contains all functions regarding polyfit
     """
 
-    def __init__(self, poly_order=12, target_res=200, ext_lvl=0.02, acc_limit=10000):
+    def __init__(self, poly_order=12, target_res=200, ext_lvl=0.02, acc_limit=1000):
         self._poly_order = poly_order
         self._target_res = target_res
         self._ext_lvl = ext_lvl

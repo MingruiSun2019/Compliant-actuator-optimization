@@ -40,8 +40,6 @@ class SeaType1(BaseModel):
         self.time_series = None
 
     def _get_motor_behavior(self, stiffness, ratio, des_torque, des_angle, time_series):
-        self.time_series = time_series
-        self.des_output_torque = des_torque
         stiffness = stiffness * np.pi / 180  # Nm/deg
         time_step = time_series[1] - time_series[0]
 
@@ -51,13 +49,17 @@ class SeaType1(BaseModel):
         motor_angle = mid_angle * ratio  # (deg)
         motor_speed = np.diff(motor_angle) / time_step * 60 / 360  # (rpm)
         motor_speed = np.append(motor_speed, motor_speed[-1])
-        self.des_motor_speed = motor_speed
 
         # Calculate motor acceleration by poly fit motor angle and double differentiate, so that no noise be introduced
         motor_angle_rad = motor_angle * np.pi / 180  # (rad)
         result_x, result_y = self.polyfitor.multi_fit(time_series, motor_angle_rad, time_series,
                                                       result_x=[], result_y=[])
         _, motor_acc = self.polyfitor.get_acc(result_x, result_y)
+
+        self.time_series = time_series
+        self.des_output_torque = des_torque
+        self.des_motor_speed = motor_speed
+
         return motor_angle, motor_speed, motor_acc
 
     def backward_calculation_4qci(self, stiffness, ratio, motor_inertia, des_torque, des_angle, time_series):
@@ -97,9 +99,8 @@ class SeaType1(BaseModel):
                                                                        des_torque, des_angle, time_series)
 
         acc_torque = (motor_inertia + gear_inertia) / 1e7 * motor_acc  # torque for accelerate the rotor itself
-        self._acc_torque = acc_torque
 
-        # HD_eff = get_hd_eff(hd, motor_speed)
+        # TODO: HD_eff = get_hd_eff(hd, motor_speed)
         self._actual_gear_eff = np.zeros(len(motor_speed))
         for i in range(len(motor_speed)):
             if motor_speed[i] * des_torque[i] >= 0:
@@ -107,6 +108,8 @@ class SeaType1(BaseModel):
             else:
                 self._actual_gear_eff[i] = 1 / self.params.gear_eff_c
         motor_torque = (des_torque / ratio) / self._actual_gear_eff + acc_torque + friction_torque
+
+        self._acc_torque = acc_torque
         self.des_motor_torque = motor_torque
         return motor_angle, motor_speed, motor_torque
 

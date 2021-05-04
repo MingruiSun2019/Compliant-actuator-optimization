@@ -10,15 +10,22 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import numpy as np
 
-# ---------- Import and clean data (importing csv into pandas)
-# ranked_comb_info = pd.read_csv("results/all_ranked_comb.csv")
 
-# ------------------------------------------------------------------------------
-# App layout
-
-Silder_length = 220
+Slider_length = 220
 Fig_width = 240
 Fig_height = 150
+Performance_metrics = ["energy", "stiffness", "gear_id", "motor_id", "T_rating", "V_rating"]
+
+My_settings = {
+        "Deactive_color": "#19aae1",
+        "Active_color": '#ffa500',
+        "Plot_color": '#1f2c56',
+        "Paper_color": '#1f2c56',
+        "Font_color": '#ee9b06',
+        "text_color": 'white',
+        "grid_color": '#476293',
+        "margin_left": "1.6vw"
+    }
 
 
 def generate_graph(base_id1=None, base_id2=None, num_act=None, settings=None):
@@ -33,14 +40,14 @@ def generate_graph(base_id1=None, base_id2=None, num_act=None, settings=None):
     return all_graphs
 
 
-def generate_text_slide_bar(text_id=None, silder_id=None, stat_id=None, num_rating=2):
+def generate_text_slide_bar(text_id=None, slider_id=None, stat_id=None, num_rating=1):
     all_comp = []
     default_value = [0.8, 0.8]
     activity_titles = ['Torque rating', 'Speed rating']
     for i in range(num_rating):
         single_comp = html.Div(children=[
             html.P(id=text_id.format(i+1), children=activity_titles[i]),
-            dcc.Slider(id=silder_id.format(i+1),
+            dcc.Slider(id=slider_id.format(i+1),
                        min=0.1,
                        max=1,
                        step=0.1,
@@ -52,39 +59,25 @@ def generate_text_slide_bar(text_id=None, silder_id=None, stat_id=None, num_rati
             html.Div(id=stat_id.format(i+1))
 
         ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '1vw', 'margin-right': '1vw',
-                  'margin-top': '1vw', "width": Silder_length})
+                  'margin-top': '1vw', "width": Slider_length})
         all_comp.append(single_comp)
 
     return all_comp
 
 
-def generate_activity(text_id=None, activity_titles=None, num_act=7):
+def generate_activity_text(text_id=None, activity_titles=None, num_act=1):
     all_comp = []
     for i in range(num_act):
         single_comp = html.Div(children=[
             html.P(id=text_id.format(i + 1), children=activity_titles[i])
         ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '1vw', 'margin-right': '1vw',
-                  'margin-top': '1vw', "width": Silder_length})
+                  'margin-top': '1vw', "width": Slider_length})
         all_comp.append(single_comp)
 
     return all_comp
 
 
-def generate_optimality_numbers(text_id1=None, text_id2=None, text_id3=None, num_act=7):
-    all_comp = []
-    margins = ['2vw', '7vw', '7vw', '7vw', '7vw', '7vw', '7vw']
-    for i in range(num_act):
-        single_comp = html.Div(children=[
-            html.P(id=text_id1.format(i+1), children="Initializing..."),
-            html.P(id=text_id2.format(i+1), children="Initializing..."),
-            html.P(id=text_id3.format(i+1), children="Initializing...")
-        ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': margins[i], 'margin-top': '1vw'})
-        all_comp.append(single_comp)
-
-    return all_comp
-
-
-def generate_ts_ta_graphs(text_id1=None, num_act=7, settings=None):
+def generate_performance_graphs(text_id1=None, num_act=1, settings=None):
     all_comp = []
     for i in range(num_act):
         single_comp = html.Div(children=[
@@ -96,11 +89,11 @@ def generate_ts_ta_graphs(text_id1=None, num_act=7, settings=None):
 
     return all_comp
 
+
 def generate_table(text_id1=None, data=None):
-    column_names = ["energy", "stiffness", "gear_id", "motor_id", "T_rating", "V_rating"]
     single_comp = dash_table.DataTable(
         id=text_id1,
-        columns=[{"name": i, "id": i} for i in column_names],
+        columns=[{"name": i, "id": i} for i in Performance_metrics],
         data=data.to_dict("record"),
         style_cell={
             'backgroundColor': "blue",
@@ -109,27 +102,16 @@ def generate_table(text_id1=None, data=None):
     return single_comp
 
 
-def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator, table_data):
-    My_settings = {
-        "Deactive_color": "#19aae1",
-        "Active_color": '#ffa500',
-        "Plot_color": '#1f2c56',
-        "Paper_color": '#1f2c56',
-        "Font_color": '#ee9b06',
-        "text_color": 'white',
-        "grid_color": '#476293',
-        "margin_left": "1.6vw"
-    }
-    Gear_list = pd.read_csv("catalog/Gear_catalog_user_defined.csv")
-
+def generate_app_layout(human_data, table_data):
+    """ Generate app layout """
     num_activity = len(human_data.weights)
-
     external_stylesheets = ['./assets/my_template.css']
-    app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+    dash_app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-    app.layout = html.Div(children=[
+    dash_app.layout = html.Div(children=[
         # left-side column
-        html.Div(style={'display': 'inline-block', 'background-color': '#192444', 'vertical-align': 'top', 'margin-left': '1vw', 'margin-right': '1vw', 'margin-top': '1vw'},
+        html.Div(style={'display': 'inline-block', 'background-color': '#192444', 'vertical-align': 'top',
+                        'margin-left': '1vw', 'margin-right': '1vw', 'margin-top': '1vw'},
                  children=[
             html.Div(style={'background-color': '#192444'},
                      children=[
@@ -139,25 +121,21 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                     html.P(id = 'text0', children='Actuator optimization')
                 ], className='row', style={'fontColor': 'white'}),
 
-
-
-
                 # first row
                 html.Div(children=[
-                    html.Br()] + generate_activity(text_id="act_title{}", activity_titles=human_data.angle_files, num_act=num_activity),
-                    className='row', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw', 'margin-right': '3vw', 'margin-top': '1vw'}),
+                    html.Br()] + generate_activity_text(text_id="act_title{}", activity_titles=human_data.angle_files,
+                                                        num_act=num_activity),
+                    className='row', style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw',
+                                            'margin-right': '3vw', 'margin-top': '1vw'}),
 
-
-                # sixth row
+                # 2th row
                 html.Div(children=[
                       html.Div(children=[
                           html.P(id='ts1', children='Torque-speed'),
                           html.P(id='ts2', children='Desired', style={"color": "red"}),
-                          html.P(id='ts3', children='Actual', style={"color": My_settings["Active_color"]})
-
-                      ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': My_settings["margin_left"],
-                                'margin-top': '1vw'})] + generate_ts_ta_graphs(text_id1="Act{}_ts", num_act=num_activity, settings=My_settings),
-                         className='row'),
+                          html.P(id='ts3', children='Actual', style={"color": My_settings["Active_color"]})],
+                               style={'display': 'inline-block', 'vertical-align': 'top',
+                                      'margin-left': My_settings["margin_left"], 'margin-top': '1vw'})] + generate_performance_graphs(text_id1="Act{}_ts", num_act=num_activity, settings=My_settings), className='row'),
 
                 # seventh row
                 html.Div(children=[
@@ -166,7 +144,7 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                           html.P(id='ta2', children='Desr motor t/a after g', style={"color": "red", "font-size": 10}),
                           html.P(id='ta4', children='Actual motor t/a after g (J)', style={"color": "yellow", "font-size": 10})
                       ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': My_settings["margin_left"],
-                                'margin-top': '1vw'})] + generate_ts_ta_graphs(text_id1="Act{}_tt", num_act=num_activity, settings=My_settings),
+                                'margin-top': '1vw'})] + generate_performance_graphs(text_id1="Act{}_tt", num_act=num_activity, settings=My_settings),
                          className='row'),
 
                 # eighth row
@@ -176,7 +154,7 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                           html.P(id='power_eff2', children='P Mechanical', style={"color": "yellow"}),
                           html.P(id='power_eff3', children='P Electrical', style={"color": "red"})
                       ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': My_settings["margin_left"],
-                                'margin-top': '1vw'})] + generate_ts_ta_graphs(text_id1="Act{}_powerEff", num_act=num_activity, settings=My_settings),
+                                'margin-top': '1vw'})] + generate_performance_graphs(text_id1="Act{}_powerEff", num_act=num_activity, settings=My_settings),
                          className='row'),
 
                 # ninth row
@@ -184,19 +162,16 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                       html.Div(children=[
                           html.P(id='voltage_current', children='Inputs   ')
                       ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': My_settings["margin_left"],
-                                'margin-top': '1vw'})] + generate_ts_ta_graphs(text_id1="Act{}_vc", num_act=num_activity, settings=My_settings),
+                                'margin-top': '1vw'})] + generate_performance_graphs(text_id1="Act{}_vc", num_act=num_activity, settings=My_settings),
                          className='row')
             ])
         ]),
 
         # right-side column
-
         html.Div(style={'display': 'inline-block', 'background-color': '#192444', 'vertical-align': 'top',
                         'margin-left': '1vw', 'margin-right': '1vw', 'margin-top': '3vw'},
                  children=[
-
-                     html.Div(children=[
-                                           html.Br()] + [html.Div(children=[
+                     html.Div(children=[html.Br()] + [html.Div(children=[
                          html.P(id='Combination_txt', children='Combination'),
                          dcc.Dropdown(id='Combination',
                                       options=[
@@ -215,10 +190,9 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                                       style={"color": "#212121"}),
                      ], style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '3vw',
                                'margin-top': '1vw'})]
-                                       + generate_text_slide_bar(text_id="rating_title{}", silder_id="rating_slider{}",
+                                       + generate_text_slide_bar(text_id="rating_title{}", slider_id="rating_slider{}",
                                                                  stat_id="rating_slider_output_container{}",
-                                                                 num_rating=num_activity),
-                              className='row',
+                                                                 num_rating=num_activity), className='row',
                               style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw',
                                      'margin-right': '3vw', 'margin-top': '1vw'}),
 
@@ -228,41 +202,27 @@ def generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalo
                                   generate_table(text_id1="filtered_comb_table", data=table_data)
                               ])
                  ]),
-
     ])
 
-    # Callbacks
-    # ------------------------------------------------------------------------------
-    # Connect the Plotly graphs with Dash Components
+    # Callback input outputs
     fig_name_format = ['Act{}_ts', 'Act{}_tt', 'Act{}_powerEff', 'Act{}_vc']
-    #output_list = []
-    #for act_i in range(num_activity):
-    #    for fig_name in fig_name_format:
-    #        output_list.append(Output(component_id=fig_name.format(act_i), component_property='figure'))
+    graph_output = []
+    for act_i in range(num_activity):
+        for fig_name in fig_name_format:
+            graph_output.append(Output(component_id=fig_name.format(act_i+1), component_property='figure'))
 
-    input_list = [Input(component_id='Combination', component_property='value'),
+    graph_input = [Input(component_id='Combination', component_property='value'),
                   Input(component_id='rating_slider1', component_property='value'),
                   Input(component_id='rating_slider2', component_property='value')]
 
-    output_list = [
-        Output(component_id='Act1_ts', component_property='figure'),
-        Output(component_id='Act1_tt', component_property='figure'),
-        Output(component_id='Act1_powerEff', component_property='figure'),
-        Output(component_id='Act1_vc', component_property='figure'),
-        Output(component_id='Act2_ts', component_property='figure'),
-        Output(component_id='Act2_tt', component_property='figure'),
-        Output(component_id='Act2_powerEff', component_property='figure'),
-        Output(component_id='Act2_vc', component_property='figure')
-    ]
-
-    input_datatable = [
+    datatable_input = [
                   Input(component_id='rating_slider1', component_property='value'),
                   Input(component_id='rating_slider2', component_property='value')]
 
-    output_datatable = [
+    datatable_output = [
         Output(component_id='filtered_comb_table', component_property='data')]
 
-    return app, output_list, input_list, input_datatable, output_datatable
+    return dash_app, graph_output, graph_input, datatable_output, datatable_input
 
 
 def get_dash_plots(actuator, motor, settings):
@@ -276,6 +236,7 @@ def get_dash_plots(actuator, motor, settings):
 
 
 def generate_ts_fig(actuator, motor, settings):
+    """ Speed-torque graph on motor side """
     n0max = actuator.params.v_limit * motor["kn"]  # no-load speed at maximum allowed voltage
     Mhmax = n0max / motor["gradient"]  # corresponding stall torque to n0max
     ts_fig = px.line(None, x=actuator.des_motor_torque,
@@ -325,9 +286,9 @@ def generate_torque_fig(actuator, motor, settings):
         font_color=settings['Font_color']
     )
     torque_fig.update_xaxes(showline=True, linewidth=1, linecolor=settings["grid_color"],
-                        gridcolor=settings["grid_color"])
+                            gridcolor=settings["grid_color"])
     torque_fig.update_yaxes(showline=True, linewidth=1, linecolor=settings["grid_color"],
-                        gridcolor=settings["grid_color"])
+                            gridcolor=settings["grid_color"])
     return torque_fig
 
 
@@ -337,8 +298,8 @@ def generate_power_fig(actuator, motor, settings):
     power_fig = px.line(None, x=normalized_time, y=actuator.electrical_power,
                         color_discrete_sequence=["red"])
     power_fig.add_trace(go.Scatter(x=normalized_time, y=actuator.mechanical_power,
-                                mode='lines',
-                                line=dict(color="yellow")), secondary_y=False)
+                                   mode='lines',
+                                   line=dict(color="yellow")), secondary_y=False)
 
     power_fig.update_layout(
         margin=dict(
@@ -392,8 +353,3 @@ def generate_input_fig(actuator, motor, settings):
     input_fig.update_yaxes(title_text="Input voltage (V)", showline=True, linewidth=1, linecolor=settings["grid_color"],
                            gridcolor=settings["grid_color"], color="#FF97FF", secondary_y=True)
     return input_fig
-
-
-if __name__ == '__main__':
-    app, output_list, input_list = generate_app_layout()
-    app.run_server(debug=True)

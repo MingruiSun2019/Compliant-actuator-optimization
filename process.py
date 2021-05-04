@@ -8,7 +8,7 @@ from lib.human_data_processing import HumanData
 from models.actuator.sea_type1 import SeaType1
 from models.energy.model_4qci import Optimize4QCI
 from models.energy.model_fmm import OptimizeFMM
-from dashboard.dash_main import generate_app_layout, get_dash_plots
+from dashboard.dash_lib import generate_app_layout, get_dash_plots
 
 
 Q1_dict = {"y": "default", "n": "user_defined"}
@@ -59,6 +59,7 @@ def process():
     print("Motor inertia range: ", m_inertia_range)
 
     # Select if use recommended narrow down catalog, or user defined
+    # TODO: auto-select
     print("Select if use recommended narrow down catalog, or user defined")
     motor_catalog = load_catalog("./catalog/Motor_catalog_user_defined.csv")
     gear_catalog = load_catalog("./catalog/Gear_catalog_user_defined.csv")
@@ -73,26 +74,13 @@ def process():
     print("Do optimization with FMM model")
     ranked_comb_info = energy_model_fmm.optimize_routine()
     print(ranked_comb_info)
-    filtered_comb = [x for x in ranked_comb_info if
-                     x["T_rating"] >= 0.8 and x["V_rating"] >= 0.8]
-    filtered_comb = pd.DataFrame(filtered_comb)
-
-    # User input performance tolerance
-    # question_txt = "Torque rating (0-1)?"
-    # user_torque_rating = ask_answer(question_txt)
-    # question_txt = "Speed rating (0-1)?"
-    # user_speed_rating = ask_answer(question_txt)
-
-    # Output filtered combinations with energy consumption and
-    # performance rating
-    # filtered_comb = [x for x in ranked_comb_info if x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
-    # print("Selected combination:")
-    # print(filtered_comb)
+    filtered_comb_init = [x for x in ranked_comb_info if x["T_rating"] >= 0.8 and x["V_rating"] >= 0.8]
+    filtered_comb_init = pd.DataFrame(filtered_comb_init)
 
     # Select if want visualization
-    dash_app, output_list, input_list, input_datatable, output_datatable = generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator, filtered_comb)
-    num_activity = len(human_data.weights)
+    dash_app, output_list, input_list, table_output, table_input = generate_app_layout(human_data, filtered_comb_init)
 
+    # Callback functions
     @dash_app.callback(output_list, input_list)
     def update_graph(comb, user_torque_rating, user_speed_rating):
         filtered_comb = [x for x in ranked_comb_info if
@@ -103,7 +91,7 @@ def process():
         stiffness = filtered_comb[comb_i]["stiffness"]
 
         all_figs = []
-        for i in range(num_activity):
+        for i in range(len(human_data.weights)):
             actuator.initialize()
             actuator.gather_info(stiffness, gear, motor,
                                  human_data.torque_data[i]["Data"], human_data.angle_data[i]["Data"],
@@ -113,7 +101,7 @@ def process():
 
         return all_figs
 
-    @dash_app.callback(output_datatable, input_datatable)
+    @dash_app.callback(table_output, table_input)
     def update_graph(user_torque_rating, user_speed_rating):
         filtered_comb = [x for x in ranked_comb_info if
                          x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
@@ -121,10 +109,6 @@ def process():
         return [table_data.to_dict('records')]
 
     dash_app.run_server(debug=False)
-
-    # Visualization
-
-    pass
 
 
 if __name__ == "__main__":
