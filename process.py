@@ -8,10 +8,21 @@ from lib.human_data_processing import HumanData
 from models.actuator.sea_type1 import SeaType1
 from models.energy.model_4qci import Optimize4QCI
 from models.energy.model_fmm import OptimizeFMM
-from dashboard.dash_main import generate_app_layout
+from dashboard.dash_main import generate_app_layout, get_dash_plots
 
 
 Q1_dict = {"y": "default", "n": "user_defined"}
+
+My_settings = {
+        "Deactive_color": "#19aae1",
+        "Active_color": '#ffa500',
+        "Plot_color": '#1f2c56',
+        "Paper_color": '#1f2c56',
+        "Font_color": '#ee9b06',
+        "text_color": 'white',
+        "grid_color": '#476293',
+        "margin_left": "1.6vw"
+    }
 
 
 def process():
@@ -62,7 +73,6 @@ def process():
     print("Do optimization with FMM model")
     ranked_comb_info = energy_model_fmm.optimize_routine()
     print(ranked_comb_info)
-    save_ranked_combs(ranked_comb_info, "results/all_ranked_comb.csv")
 
     # User input performance tolerance
     # question_txt = "Torque rating (0-1)?"
@@ -77,7 +87,29 @@ def process():
     # print(filtered_comb)
 
     # Select if want visualization
-    dash_app = generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator)
+    dash_app, output_list, input_list = generate_app_layout(ranked_comb_info, human_data, motor_catalog, gear_catalog, actuator)
+    num_activity = len(human_data.weights)
+
+    @dash_app.callback(output_list, input_list)
+    def update_graph(comb, user_torque_rating, user_speed_rating):
+        filtered_comb = [x for x in ranked_comb_info if
+                         x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
+        comb_i = int(comb[1:])
+        motor = motor_catalog.loc[motor_catalog['ID'] == filtered_comb[comb_i]["motor_id"]].squeeze()  # df to series
+        gear = gear_catalog.loc[gear_catalog['ID'] == filtered_comb[comb_i]["gear_id"]].squeeze()  # df to series
+        stiffness = filtered_comb[comb_i]["stiffness"]
+
+        all_figs = []
+        for i in range(num_activity):
+            actuator.initialize()
+            actuator.gather_info(stiffness, gear, motor,
+                                 human_data.torque_data[i]["Data"], human_data.angle_data[i]["Data"],
+                                 human_data.angle_data[i]["Time"])
+            output_figs = get_dash_plots(actuator, motor, My_settings)
+            all_figs += list(output_figs)
+
+        return all_figs
+
     dash_app.run_server(debug=False)
 
     # Visualization

@@ -44,8 +44,8 @@ class OptimizeFMM(EnergyModelBase):
 
                     ave_torque_rating = sum_torque_rating / np.sum(self.human_data.weights)
                     ave_speed_rating = sum_speed_rating / np.sum(self.human_data.weights)
-                    comb_info = {"energy": sum_energy, "stiffness": stiffness, "gear": gear['ID'],
-                                 "motor": motor['ID'], "T_rating": ave_torque_rating, "V_rating": ave_speed_rating}
+                    comb_info = {"energy": sum_energy, "stiffness": stiffness, "gear_id": gear['ID'],
+                                 "motor_id": motor['ID'], "T_rating": ave_torque_rating, "V_rating": ave_speed_rating}
                     all_comb_info.append(comb_info)
 
         ranked_comb_info = sorted(all_comb_info, key=lambda x: x["energy"])

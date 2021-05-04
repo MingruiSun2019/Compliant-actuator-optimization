@@ -22,6 +22,7 @@ class SeaType1(BaseModel):
         self.input_current = None  # done
         self.mechanical_power = None
         self.electrical_power = None
+        self.time_series = None
 
     def initialize(self):
         self._acc_torque = None
@@ -36,8 +37,10 @@ class SeaType1(BaseModel):
         self.input_current = None  # done
         self.mechanical_power = None
         self.electrical_power = None
+        self.time_series = None
 
     def _get_motor_behavior(self, stiffness, ratio, des_torque, des_angle, time_series):
+        self.time_series = time_series
         self.des_output_torque = des_torque
         stiffness = stiffness * np.pi / 180  # Nm/deg
         time_step = time_series[1] - time_series[0]
@@ -175,5 +178,6 @@ class SeaType1(BaseModel):
         actual_motor_torque, actual_motor_speed = self.apply_voltage_current_limit(motor_torque, motor_speed, motor)
         input_voltage, input_current = self.get_motor_inputs(actual_motor_torque, actual_motor_speed, motor)
         actual_output_torque = self.forward_calculation(actual_motor_torque, gear, motor)
+        self.get_powers()
 
 
