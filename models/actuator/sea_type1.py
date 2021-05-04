@@ -157,17 +157,20 @@ class SeaType1(BaseModel):
         self.actual_output_torque = actual_output_torque
         return actual_output_torque
 
-    def get_performance_rating(self, actual_output_torque, actual_motor_speed, des_output_torque):
-        max_des_torque = np.max(des_output_torque)
+    def get_performance_rating(self, motor):
+        nominal_current = motor["In"]
+        nominal_voltage = motor["Vn"]
+        max_des_torque = np.max(self.des_output_torque)
         max_torque_deviation = max_des_torque * 0.02
         max_des_motor_speed = np.max(self.des_motor_speed)
         max_speed_deviation = max_des_motor_speed * 0.02
-        data_len = len(des_output_torque)
-        torque_rating = np.sum(np.abs(actual_output_torque-des_output_torque) < max_torque_deviation) / data_len   # 0-1, higher better
-        speed_rating = np.sum(np.abs(actual_motor_speed-self.des_motor_speed) < max_speed_deviation) / data_len   # 0-1, higher better
-        # TODO: UI rating
+        data_len = len(self.des_output_torque)
+        torque_rating = np.sum(np.abs(self.actual_output_torque-self.des_output_torque) < max_torque_deviation) / data_len   # 0-1, higher better
+        speed_rating = np.sum(np.abs(self.actual_motor_speed-self.des_motor_speed) < max_speed_deviation) / data_len   # 0-1, higher better
+        current_rating = np.sum(self.input_current < nominal_current) / data_len
+        voltage_rating = np.sum(self.input_voltage < nominal_voltage) / data_len
 
-        return torque_rating, speed_rating
+        return torque_rating, speed_rating, current_rating, voltage_rating
 
     def get_powers(self):
         """

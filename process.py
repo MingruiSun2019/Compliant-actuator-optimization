@@ -74,20 +74,25 @@ def process():
     print("Do optimization with FMM model")
     ranked_comb_info = energy_model_fmm.optimize_routine()
     print(ranked_comb_info)
-    filtered_comb_init = [x for x in ranked_comb_info if x["T_rating"] >= 0.8 and x["V_rating"] >= 0.8]
+    filtered_comb_init = [x for x in ranked_comb_info if x["T_rating"] >= 0.1 and x["V_rating"] >= 0.1
+                          and x["U_rating"] >= 0.1 and x["I_rating"] >= 0.1
+                          and x["motor_dia"] <= 100 and x["motor_length"] <= 80]   # default value
     filtered_comb_init = pd.DataFrame(filtered_comb_init)
 
     # Select if want visualization
-    dash_app, output_list, input_list, table_output, table_input = generate_app_layout(human_data, filtered_comb_init)
+    dash_app, output_list, input_list, table_output, table_input, stat_output = generate_app_layout(human_data, filtered_comb_init)
 
     # Callback functions
     @dash_app.callback(output_list, input_list)
-    def update_graph(comb, user_torque_rating, user_speed_rating):
+    def update_graph(comb, usr_t, usr_v, usr_u, usr_i, usr_motor_len, usr_motor_dia):
         filtered_comb = [x for x in ranked_comb_info if
-                         x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
+                         x["T_rating"] >= float(usr_t) and x["V_rating"] >= float(usr_v)
+                         and x["U_rating"] >= float(usr_u) and x["I_rating"] >= float(usr_i)
+                         and x["motor_dia"] <= float(usr_motor_len) and x["motor_length"] <= float(usr_motor_dia)]
+
         comb_i = int(comb[1:])
-        motor = motor_catalog.loc[motor_catalog['ID'] == filtered_comb[comb_i]["motor_id"]].squeeze()  # df to series
-        gear = gear_catalog.loc[gear_catalog['ID'] == filtered_comb[comb_i]["gear_id"]].squeeze()  # df to series
+        motor = motor_catalog.loc[motor_catalog['Name'] == filtered_comb[comb_i]["motor_name"]].squeeze()  # df to series
+        gear = gear_catalog.loc[gear_catalog['Name'] == filtered_comb[comb_i]["gear_name"]].squeeze()  # df to series
         stiffness = filtered_comb[comb_i]["stiffness"]
 
         all_figs = []
@@ -102,11 +107,17 @@ def process():
         return all_figs
 
     @dash_app.callback(table_output, table_input)
-    def update_graph(user_torque_rating, user_speed_rating):
+    def update_graph(user_torque_rating, user_speed_rating, usr_u, usr_i, usr_motor_len, usr_motor_dia):
         filtered_comb = [x for x in ranked_comb_info if
-                         x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)]
-        table_data = pd.DataFrame(filtered_comb)  # Only take the top 10
+                         x["T_rating"] >= float(user_torque_rating) and x["V_rating"] >= float(user_speed_rating)
+                         and x["U_rating"] >= float(usr_u) and x["I_rating"] >= float(usr_i)
+                         and x["motor_dia"] <= float(usr_motor_len) and x["motor_length"] <= float(usr_motor_dia)]
+        table_data = pd.DataFrame(filtered_comb[:100])  # Only take the top 100
         return [table_data.to_dict('records')]
+
+    @dash_app.callback(stat_output, table_input)
+    def update_graph(stat_1, stat_2, stat_3, stat_4, stat_5, stat_6):
+        return [stat_1, stat_2, stat_3, stat_4, stat_5, stat_6]
 
     dash_app.run_server(debug=False)
 

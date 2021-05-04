@@ -10,11 +10,12 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import numpy as np
 
-
+Num_rating = 6
 Slider_length = 220
 Fig_width = 240
 Fig_height = 150
-Performance_metrics = ["energy", "stiffness", "gear_id", "motor_id", "T_rating", "V_rating"]
+Performance_metrics = ["energy", "stiffness", "gear_name", "motor_name", "T_rating", "V_rating",
+                       'U_rating', 'I_rating', 'motor_dia', 'motor_length']
 
 My_settings = {
         "Deactive_color": "#19aae1",
@@ -42,18 +43,20 @@ def generate_graph(base_id1=None, base_id2=None, num_act=None, settings=None):
 
 def generate_text_slide_bar(text_id=None, slider_id=None, stat_id=None, num_rating=1):
     all_comp = []
-    default_value = [0.8, 0.8]
-    activity_titles = ['Torque rating', 'Speed rating']
+    default_value = [0.1, 0.1, 0.1, 0.1, 100, 80]
+    all_min = [0.1, 0.1, 0.1, 0.1, 10, 10]
+    all_max = [1, 1, 1, 1, 120, 120]
+    all_step = [0.1, 0.1, 0.1, 0.1, 10, 10]
+    activity_titles = ['Torque rating', 'Speed rating', 'U_rating', 'I_rating', 'Motor dia', 'Motor len']
     for i in range(num_rating):
         single_comp = html.Div(children=[
             html.P(id=text_id.format(i+1), children=activity_titles[i]),
             dcc.Slider(id=slider_id.format(i+1),
-                       min=0.1,
-                       max=1,
-                       step=0.1,
+                       min=all_min[i],
+                       max=all_max[i],
+                       step=all_step[i],
                        marks={0: "0%",
-                              0.5: "50%",
-                              1: "100%"},
+                              all_max[i]: "100%"},
                        value=default_value[i],
                        ),
             html.Div(id=stat_id.format(i+1))
@@ -192,7 +195,7 @@ def generate_app_layout(human_data, table_data):
                                'margin-top': '1vw'})]
                                        + generate_text_slide_bar(text_id="rating_title{}", slider_id="rating_slider{}",
                                                                  stat_id="rating_slider_output_container{}",
-                                                                 num_rating=num_activity), className='row',
+                                                                 num_rating=Num_rating), className='row',
                               style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw',
                                      'margin-right': '3vw', 'margin-top': '1vw'}),
 
@@ -212,17 +215,32 @@ def generate_app_layout(human_data, table_data):
             graph_output.append(Output(component_id=fig_name.format(act_i+1), component_property='figure'))
 
     graph_input = [Input(component_id='Combination', component_property='value'),
-                  Input(component_id='rating_slider1', component_property='value'),
-                  Input(component_id='rating_slider2', component_property='value')]
+                   Input(component_id='rating_slider1', component_property='value'),
+                   Input(component_id='rating_slider2', component_property='value'),
+                   Input(component_id='rating_slider3', component_property='value'),
+                   Input(component_id='rating_slider4', component_property='value'),
+                   Input(component_id='rating_slider5', component_property='value'),
+                   Input(component_id='rating_slider6', component_property='value')]
 
     datatable_input = [
                   Input(component_id='rating_slider1', component_property='value'),
-                  Input(component_id='rating_slider2', component_property='value')]
+                  Input(component_id='rating_slider2', component_property='value'),
+                  Input(component_id='rating_slider3', component_property='value'),
+                  Input(component_id='rating_slider4', component_property='value'),
+                  Input(component_id='rating_slider5', component_property='value'),
+                  Input(component_id='rating_slider6', component_property='value')]
 
     datatable_output = [
         Output(component_id='filtered_comb_table', component_property='data')]
 
-    return dash_app, graph_output, graph_input, datatable_output, datatable_input
+    stat_output = [Output(component_id='rating_slider_output_container1', component_property='children'),
+                   Output(component_id='rating_slider_output_container2', component_property='children'),
+                   Output(component_id='rating_slider_output_container3', component_property='children'),
+                   Output(component_id='rating_slider_output_container4', component_property='children'),
+                   Output(component_id='rating_slider_output_container5', component_property='children'),
+                   Output(component_id='rating_slider_output_container6', component_property='children')]
+
+    return dash_app, graph_output, graph_input, datatable_output, datatable_input, stat_output
 
 
 def get_dash_plots(actuator, motor, settings):

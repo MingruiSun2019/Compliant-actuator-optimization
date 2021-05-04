@@ -10,15 +10,17 @@ class OptimizeFMM(EnergyModelBase):
         self.gear_catalog = gear_catalog
 
     def optimize_routine(self):
-        stiffness_iter = range(self.stiff_range[0], self.stiff_range[1], int((self.stiff_range[1] - self.stiff_range[0]) / 10))
+        if self.stiff_range[0] < self.stiff_range[1]:
+            stiffness_iter = range(self.stiff_range[0], self.stiff_range[1], int((self.stiff_range[1] - self.stiff_range[0]) / 10))
+        else:
+            stiffness_iter = [self.stiff_range[0]]
 
         all_comb_info = []  # electrical energy of all combinations
         for stiffness in stiffness_iter:
             for gear_i, gear in self.gear_catalog.iterrows():
                 for motor_i, motor in self.motor_catalog.iterrows():
                     sum_energy = 0  # sum of electrical energy over all activities
-                    sum_torque_rating = 0
-                    sum_speed_rating = 0
+                    sum_torque_rating, sum_speed_rating, sum_current_rating, sum_voltage_rating = 0, 0, 0, 0
                     for activity_i, activity_w in enumerate(self.human_data.weights):
                         activity_w = float(activity_w)
                         des_torque, des_angle, time_series, time_step = self.load_human_data(activity_i)
@@ -33,20 +35,27 @@ class OptimizeFMM(EnergyModelBase):
                         input_voltage, input_current = self.actuator.get_motor_inputs(actual_motor_torque, actual_motor_speed, motor)
 
                         electrical_power = input_voltage * input_current  # speed (rpm) to (rad/s)
+                        electrical_power = np.clip(electrical_power, a_min=0, a_max=None)  # no-rechargable bettery
                         electrical_energy = np.sum(electrical_power) * time_step
                         sum_energy += electrical_energy * activity_w
 
                         # Forward calculation and performance rating
-                        actual_output_torque = self.actuator.forward_calculation(actual_motor_torque, gear, motor)
-                        torque_rating, speed_rating = self.actuator.get_performance_rating(actual_output_torque, actual_motor_speed, des_torque)
+                        _ = self.actuator.forward_calculation(actual_motor_torque, gear, motor)
+                        torque_rating, speed_rating, current_rating, voltage_rating = self.actuator.get_performance_rating(motor)
                         sum_torque_rating += torque_rating * activity_w
                         sum_speed_rating += speed_rating * activity_w
+                        sum_current_rating += current_rating * activity_w
+                        sum_voltage_rating += voltage_rating * activity_w
 
                     ave_torque_rating = sum_torque_rating / np.sum(self.human_data.weights)
                     ave_speed_rating = sum_speed_rating / np.sum(self.human_data.weights)
+                    ave_current_rating = sum_current_rating / np.sum(self.human_data.weights)
+                    ave_voltage_rating = sum_voltage_rating / np.sum(self.human_data.weights)
                     # TODO: spring angle can be one
-                    comb_info = {"energy": sum_energy, "stiffness": stiffness, "gear_id": gear['ID'],
-                                 "motor_id": motor['ID'], "T_rating": ave_torque_rating, "V_rating": ave_speed_rating}
+                    comb_info = {"energy": sum_energy, "stiffness": stiffness, "gear_name": gear['Name'],
+                                 "motor_name": motor['Name'], "T_rating": ave_torque_rating, "V_rating": ave_speed_rating,
+                                 "U_rating": ave_voltage_rating, "I_rating": ave_current_rating,
+                                 "motor_dia": motor["diameter"], "motor_length": motor["length"]}
                     all_comb_info.append(comb_info)
 
         ranked_comb_info = sorted(all_comb_info, key=lambda x: x["energy"])
