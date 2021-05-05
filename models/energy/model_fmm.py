@@ -10,10 +10,7 @@ class OptimizeFMM(EnergyModelBase):
         self.gear_catalog = gear_catalog
 
     def optimize_routine(self):
-        if self.stiff_range[0] < self.stiff_range[1]:
-            stiffness_iter = range(self.stiff_range[0], self.stiff_range[1], int((self.stiff_range[1] - self.stiff_range[0]) / 10))
-        else:
-            stiffness_iter = [self.stiff_range[0]]
+        stiffness_iter = self._get_iter_from_range(self.stiff_range, n_points=5)
 
         all_comb_info = []  # electrical energy of all combinations
         for stiffness in stiffness_iter:
@@ -60,3 +57,15 @@ class OptimizeFMM(EnergyModelBase):
 
         ranked_comb_info = sorted(all_comb_info, key=lambda x: x["energy"])
         return ranked_comb_info
+
+    @staticmethod
+    def _get_iter_from_range(source, n_points):
+        # n_points in each subset
+        output_iter = []
+        for sub_range in source:
+            if sub_range[0] == sub_range[1]:
+                output_iter += [sub_range[0]]
+            else:
+                inter = max(int(np.floor((sub_range[1] - sub_range[0]) / n_points)), 1)
+                output_iter += list(range(sub_range[0], sub_range[1], inter))
+        return output_iter

@@ -99,7 +99,7 @@ def generate_table(text_id1=None, data=None):
         columns=[{"name": i, "id": i} for i in Performance_metrics],
         data=data.to_dict("record"),
         style_cell={
-            'backgroundColor': "blue",
+            'backgroundColor': My_settings["Paper_color"],
             'color': "#f3f5f4"})
 
     return single_comp

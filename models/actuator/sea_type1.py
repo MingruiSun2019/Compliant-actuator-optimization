@@ -8,8 +8,9 @@ class SeaType1(BaseModel):
     Motor -> Gear -> Spring -> output
     """
 
-    def __init__(self, params, polyfitor):
+    def __init__(self, params, polyfitor, motor_eff_model):
         super().__init__(params, polyfitor)
+        self.motor_eff_model = motor_eff_model
         self._acc_torque = None
         self.des_motor_speed = None  # done
         self.des_motor_torque = None  # done
@@ -75,14 +76,20 @@ class SeaType1(BaseModel):
         # HD_eff = get_hd_eff(hd, motor_speed)
         motor_torque = np.zeros(len(motor_speed))
         actual_motor_eff = np.zeros(len(motor_speed))
+        # poly_coef = [0.00144497, -0.05156015, 0.60075288, -1.30124496]
         for i in range(len(motor_speed)):
             if motor_speed[i] * des_torque[i] >= 0:
                 actual_gear_eff = self.params.gear_eff_c
-                actual_motor_eff[i] = self.params.motor_eff_c
             else:
                 actual_gear_eff = 1 / self.params.gear_eff_c
-                actual_motor_eff[i] = 1 / self.params.motor_eff_c
             motor_torque[i] = (des_torque[i] / ratio) / actual_gear_eff + acc_torque[i]
+
+        for i in range(len(motor_speed)):
+            fitted_motor_eff = self.motor_eff_model(np.log(np.abs(motor_speed[i] / motor_torque[i])))
+            if motor_speed[i] * des_torque[i] >= 0:
+                actual_motor_eff[i] = fitted_motor_eff
+            else:
+                actual_motor_eff[i] = 1 / fitted_motor_eff
 
         self.des_motor_torque = motor_torque
         return motor_angle, motor_speed, motor_torque, actual_motor_eff

@@ -22,5 +22,37 @@ def load_catalog(filename):
     return catalog
 
 
+def fit_motor_efficiency():
+    motor_catalog = load_catalog("./catalog/Motor_catalog_user_defined.csv")
+    speed_torque_ratio_data = []
+    efficiency_data = []
+    motor_count = 0
+    for index, row in motor_catalog.iterrows():
+        if motor_count > 10:
+            break
+        speed_array = np.linspace(100, row["Vn"] * row["kn"] * 1.5, 10)
+        torque_array = np.linspace(0.05, row["In"] * row["km"] * 10, 10)
+        t_s_ratio_array = np.zeros(len(speed_array) * len(torque_array))
+        current_array = np.zeros(len(t_s_ratio_array))
+        joule_array = np.zeros(len(t_s_ratio_array))
+        pm_array = np.zeros(len(t_s_ratio_array))
+        eff_list = np.zeros(len(t_s_ratio_array))
+        count = 0
+        for speed in speed_array:
+            for torque in torque_array:
+                t_s_ratio_array[count] = speed / torque
+                current_array[count] = torque / row["km"]
+                joule_array[count] = current_array[count] ** 2 * row["Rw"]
+                pm_array[count] = speed * torque
+                eff_list[count] = pm_array[count] / (pm_array[count] + joule_array[count])
+                count += 1
 
+        speed_torque_ratio_data += list(np.log(t_s_ratio_array))
+        efficiency_data += list(eff_list)
+        motor_count += 1
+
+    poly_coef = np.polyfit(speed_torque_ratio_data, efficiency_data, 3)
+    model = np.poly1d(poly_coef)
+
+    return model
 

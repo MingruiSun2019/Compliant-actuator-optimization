@@ -8,21 +8,10 @@ from lib.human_data_processing import HumanData
 from models.actuator.sea_type1 import SeaType1
 from models.energy.model_4qci import Optimize4QCI
 from models.energy.model_fmm import OptimizeFMM
-from dashboard.dash_lib import generate_app_layout, get_dash_plots
+from dashboard.dash_lib import generate_app_layout, get_dash_plots, My_settings
 
 
 Q1_dict = {"y": "default", "n": "user_defined"}
-
-My_settings = {
-        "Deactive_color": "#19aae1",
-        "Active_color": '#ffa500',
-        "Plot_color": '#1f2c56',
-        "Paper_color": '#1f2c56',
-        "Font_color": '#ee9b06',
-        "text_color": 'white',
-        "grid_color": '#476293',
-        "margin_left": "1.6vw"
-    }
 
 
 def process():
@@ -37,10 +26,13 @@ def process():
     human_data = HumanData(params)
     human_data.assign_weights()
 
+    # Fit motor efficiency based on default motor database
+    motor_eff_model = fit_motor_efficiency()
+
     # Initialize actuator and polyfitor
     print("Initialize actuator and polyfitor")
     polyfitor = Polyfitor()
-    actuator = SeaType1(params=params, polyfitor=polyfitor)
+    actuator = SeaType1(params=params, polyfitor=polyfitor,  motor_eff_model=motor_eff_model)
 
     # Initialize optimizer 4QCI
     print("Initialize optimizer 4QCI")
@@ -73,7 +65,6 @@ def process():
     # performance rating
     print("Do optimization with FMM model")
     ranked_comb_info = energy_model_fmm.optimize_routine()
-    print(ranked_comb_info)
     filtered_comb_init = [x for x in ranked_comb_info if x["T_rating"] >= 0.1 and x["V_rating"] >= 0.1
                           and x["U_rating"] >= 0.1 and x["I_rating"] >= 0.1
                           and x["motor_dia"] <= 100 and x["motor_length"] <= 80]   # default value

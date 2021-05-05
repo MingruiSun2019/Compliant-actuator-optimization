@@ -42,8 +42,7 @@ class Optimize4QCI(EnergyModelBase):
         ranked_comb_info = sorted(all_comb_info, key=lambda x: x["energy"])
         return ranked_comb_info
 
-    @staticmethod
-    def get_recommendation(ranked_comb_info, n_points=100):
+    def get_recommendation(self, ranked_comb_info, n_points=100):
         """
         From the top n_points, recommend optimal variables range
         """
@@ -53,8 +52,25 @@ class Optimize4QCI(EnergyModelBase):
         all_ratio = sorted([x["ratio"] for x in top_comb_info])
         all_m_inertia = sorted([x["m_inertia"] for x in top_comb_info])
 
-        stiffness_range = [all_stiffness[0], all_stiffness[-1]]
-        ratio_range = [all_ratio[0], all_ratio[-1]]
-        m_inertia_range = [all_m_inertia[0], all_m_inertia[-1]]
+        stiffness_range = self._get_range(all_stiffness, self.params.stiffness_interval)
+        ratio_range = self._get_range(all_ratio, self.params.gear_ratio_interval)
+        m_inertia_range = self._get_range(all_m_inertia, self.params.motor_j_interval)
 
         return stiffness_range, ratio_range, m_inertia_range
+
+    @staticmethod
+    def _get_range(sources, interval):
+        """
+        Get optimal ranges from optimal set of numbers
+        """
+        # e.g. sourcee = [1,2,3, 5,6,7]
+        param_range = []  # [[1,2,3], [5,6,7]] interval = 1
+        subset_temp = []
+        for i, x in enumerate(sources):
+            subset_temp.append(x)
+            if i+1 == len(sources) or sources[i + 1] - sources[i] > interval:
+                param_range.append(subset_temp)
+                subset_temp = []
+        # final_range = [[1,3], [5,7]]
+        final_range = [[x[0], x[-1]] for x in param_range]
+        return final_range
