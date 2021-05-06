@@ -167,15 +167,12 @@ class SeaType1(BaseModel):
     def get_performance_rating(self, motor):
         nominal_current = motor["In"]
         nominal_voltage = motor["Vn"]
-        max_des_torque = np.max(self.des_output_torque)
-        max_torque_deviation = max_des_torque * 0.02
-        max_des_motor_speed = np.max(self.des_motor_speed)
-        max_speed_deviation = max_des_motor_speed * 0.02
-        data_len = len(self.des_output_torque)
-        torque_rating = np.sum(np.abs(self.actual_output_torque-self.des_output_torque) < max_torque_deviation) / data_len   # 0-1, higher better
-        speed_rating = np.sum(np.abs(self.actual_motor_speed-self.des_motor_speed) < max_speed_deviation) / data_len   # 0-1, higher better
-        current_rating = np.sum(self.input_current < nominal_current) / data_len
-        voltage_rating = np.sum(self.input_voltage < nominal_voltage) / data_len
+
+        torque_rating = np.sqrt(np.mean((self.actual_output_torque-self.des_output_torque)**2))   # RMSE
+        speed_rating = np.sqrt(np.mean((self.actual_motor_speed - self.des_motor_speed) ** 2))   # RMSE
+
+        current_rating = np.sqrt(np.sum(np.clip(np.abs(self.input_current) - np.abs(nominal_current), a_min=0, a_max=None) ** 2))
+        voltage_rating = np.sqrt(np.sum(np.clip(np.abs(self.input_voltage) - np.abs(nominal_voltage), a_min=0, a_max=None) ** 2))
 
         return torque_rating, speed_rating, current_rating, voltage_rating
 

@@ -41,12 +41,12 @@ def generate_graph(base_id1=None, base_id2=None, num_act=None, settings=None):
     return all_graphs
 
 
-def generate_text_slide_bar(text_id=None, slider_id=None, stat_id=None, num_rating=1):
+def generate_text_slide_bar(text_id=None, slider_id=None, stat_id=None, num_rating=1, max_ratings=None):
     all_comp = []
-    default_value = [0.1, 0.1, 0.1, 0.1, 100, 80]
-    all_min = [0.1, 0.1, 0.1, 0.1, 10, 10]
-    all_max = [1, 1, 1, 1, 120, 120]
-    all_step = [0.1, 0.1, 0.1, 0.1, 10, 10]
+    default_value = [max_ratings["T_rating"], max_ratings["V_rating"], max_ratings["U_rating"], max_ratings["I_rating"], 100, 80]
+    all_min = [0, 0, 0, 0, 10, 10]
+    all_max = [max_ratings["T_rating"], max_ratings["V_rating"], max_ratings["U_rating"], max_ratings["I_rating"], 120, 120]
+    all_step = [max_ratings["T_rating"] / 100, max_ratings["V_rating"] / 100, max_ratings["U_rating"] / 100, max_ratings["I_rating"] / 100, 10, 10]
     activity_titles = ['Torque rating', 'Speed rating', 'U_rating', 'I_rating', 'Motor dia', 'Motor len']
     for i in range(num_rating):
         single_comp = html.Div(children=[
@@ -55,8 +55,8 @@ def generate_text_slide_bar(text_id=None, slider_id=None, stat_id=None, num_rati
                        min=all_min[i],
                        max=all_max[i],
                        step=all_step[i],
-                       marks={0: "0%",
-                              all_max[i]: "100%"},
+                       marks={0: "0",
+                              all_max[i]: "{:.2f}".format(all_max[i])},
                        value=default_value[i],
                        ),
             html.Div(id=stat_id.format(i+1))
@@ -105,7 +105,7 @@ def generate_table(text_id1=None, data=None):
     return single_comp
 
 
-def generate_app_layout(human_data, table_data):
+def generate_app_layout(human_data, table_data, max_ratings):
     """ Generate app layout """
     num_activity = len(human_data.weights)
     external_stylesheets = ['./assets/my_template.css']
@@ -195,7 +195,7 @@ def generate_app_layout(human_data, table_data):
                                'margin-top': '1vw'})]
                                        + generate_text_slide_bar(text_id="rating_title{}", slider_id="rating_slider{}",
                                                                  stat_id="rating_slider_output_container{}",
-                                                                 num_rating=Num_rating), className='row',
+                                                                 num_rating=Num_rating, max_ratings=max_ratings), className='row',
                               style={'display': 'inline-block', 'vertical-align': 'top', 'margin-left': '7vw',
                                      'margin-right': '3vw', 'margin-top': '1vw'}),
 

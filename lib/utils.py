@@ -56,3 +56,25 @@ def fit_motor_efficiency():
 
     return model
 
+
+def num_2dec(num):
+    return "{:.2f}".format(num)
+
+
+def narrow_down_catalog(key_range, key, filename, is_motor=True):
+    def_cat = load_catalog(filename)
+    count = 0
+    for sub_range in key_range:
+        if is_motor:
+            sub_cat = def_cat[(def_cat[key] >= sub_range[0]-200) & (def_cat[key] <= sub_range[1])]   # to include gear inertia
+        else:
+            sub_cat = def_cat[(def_cat[key] >= sub_range[0]) & (def_cat[key] <= sub_range[1])]
+        if count == 0:
+            filtered_cat = sub_cat
+        else:
+            pd.concat([filtered_cat, sub_cat])
+        count += 1
+
+    return filtered_cat
+
+

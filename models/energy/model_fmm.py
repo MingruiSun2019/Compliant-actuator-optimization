@@ -10,7 +10,7 @@ class OptimizeFMM(EnergyModelBase):
         self.gear_catalog = gear_catalog
 
     def optimize_routine(self):
-        stiffness_iter = self._get_iter_from_range(self.stiff_range, n_points=5)
+        stiffness_iter = self._get_iter_from_range(self.stiff_range, n_points=3)
 
         all_comb_info = []  # electrical energy of all combinations
         for stiffness in stiffness_iter:
@@ -56,7 +56,8 @@ class OptimizeFMM(EnergyModelBase):
                     all_comb_info.append(comb_info)
 
         ranked_comb_info = sorted(all_comb_info, key=lambda x: x["energy"])
-        return ranked_comb_info
+        max_ratings = self._get_max_rating(ranked_comb_info)
+        return ranked_comb_info, max_ratings
 
     @staticmethod
     def _get_iter_from_range(source, n_points):
@@ -69,3 +70,17 @@ class OptimizeFMM(EnergyModelBase):
                 inter = max(int(np.floor((sub_range[1] - sub_range[0]) / n_points)), 1)
                 output_iter += list(range(sub_range[0], sub_range[1], inter))
         return output_iter
+
+    @staticmethod
+    def _get_max_rating(all_comb_info):
+        max_torque_rating = max([x["T_rating"] for x in all_comb_info])
+        max_speed_rating = max([x["V_rating"] for x in all_comb_info])
+        max_current_rating = max([x["U_rating"] for x in all_comb_info])
+        max_voltage_rating = max([x["I_rating"] for x in all_comb_info])
+
+        max_ratings = {"T_rating": max_torque_rating,
+                       "V_rating": max_speed_rating,
+                       "I_rating": max_current_rating,
+                       "U_rating": max_voltage_rating}
+
+        return max_ratings
