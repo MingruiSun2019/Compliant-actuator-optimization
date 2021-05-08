@@ -17,6 +17,7 @@ class Optimize4QCI(EnergyModelBase):
             for ratio in ratio_iter:
                 for m_inertia in motor_inertia_iter:
                     sum_energy = 0   # sum of electrical energy over all activities
+                    ave_power = 0
                     for activity_i, activity_w in enumerate(self.human_data.weights):
                         activity_w = float(activity_w)
                         des_torque, des_angle, time_series, time_step = self.load_human_data(activity_i)
@@ -34,8 +35,9 @@ class Optimize4QCI(EnergyModelBase):
                         electrical_power = np.clip(electrical_power, a_min=0, a_max=None)   # no-rechargable bettery
                         electrical_energy = np.sum(electrical_power) * time_step  # depend on direction of power flow
                         sum_energy += electrical_energy * activity_w
+                        ave_power += np.mean(electrical_power) * activity_w
 
-                    comb_info = {"energy": sum_energy, "stiffness": stiffness, "ratio": ratio, "m_inertia": m_inertia}
+                    comb_info = {"energy": sum_energy, "ave_power": ave_power, "stiffness": stiffness, "ratio": ratio, "m_inertia": m_inertia}
                     all_comb_info.append(comb_info)
 
         # TODO: output max mechanical power to limit gear load
@@ -74,3 +76,10 @@ class Optimize4QCI(EnergyModelBase):
         # final_range = [[1,3], [5,7]]
         final_range = [[x[0], x[-1]] for x in param_range]
         return final_range
+
+    def get_peak_torque(self):
+        peak_torque = 0
+        for activity_i, activity_w in enumerate(self.human_data.weights):
+            des_torque, des_angle, time_series, time_step = self.load_human_data(activity_i)
+            peak_torque = max(max(des_torque), peak_torque)
+        return peak_torque

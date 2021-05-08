@@ -28,3 +28,4 @@ class Params():
         self.v_limit = pkg.DRIVER_VOLTAGE_LIMIT
         self.c_limit = pkg.DRIVER_CURRENT_LIMIT
         self.body_weight = pkg.BODY_WEIGHT
+        self.link_inertia = pkg.LINK_INERTIA

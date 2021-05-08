@@ -31,12 +31,12 @@ def process():
     human_data.assign_weights()
 
     # Fit motor efficiency based on default motor database
-    motor_eff_model = fit_motor_efficiency()
+    popt = fit_motor_efficiency(Default_motor_catalog)
 
     # Initialize actuator and polyfitor
     print("Initialize actuator and polyfitor")
     polyfitor = Polyfitor()
-    actuator = SeaType1(params=params, polyfitor=polyfitor,  motor_eff_model=motor_eff_model)
+    actuator = SeaType1(params=params, polyfitor=polyfitor,  motor_eff_model=popt)
 
     # Initialize optimizer 4QCI
     print("Initialize optimizer 4QCI")
@@ -45,6 +45,7 @@ def process():
     # Do optimization using 4QCI model
     print("Do optimization using 4QCI model")
     ranked_comb_info = energy_model_4qci.optimize_routine()
+    min_ave_power = min([x["ave_power"] for x in ranked_comb_info])
     print("ranked_4qci_comb:", ranked_comb_info)
 
     # Generate recommended variable range from n opt points
@@ -54,13 +55,20 @@ def process():
     print("Ratio range: ", ratio_range)
     print("Motor inertia range: ", m_inertia_range)
 
+    # Get peak load torque
+    peak_load_torque = energy_model_4qci.get_peak_torque()
+    print("Peak torque: ", peak_load_torque)
+    print("Min_ave_power: ", min_ave_power)
+
     # Select if use recommended narrow down catalog, or user defined
     # TODO: auto-select
     question_txt = "Do you want to use default database (y), or user defined database (n)?"
     ans = ask_answer(question_txt)
     if ans == "y":
-        motor_catalog = narrow_down_catalog(m_inertia_range, key="Jr", filename=Default_motor_catalog, is_motor=True)
-        gear_catalog = narrow_down_catalog(ratio_range, key="ratio", filename=Default_gear_catalog, is_motor=False)
+        gear_catalog = narrow_down_gear_catalog(ratio_range, peak_load_torque, filename=Default_gear_catalog)
+        refined_inertia_range = refine_inertia_range(m_inertia_range, gear_catalog, params)
+        print("refined_inertia_range: ", refined_inertia_range)
+        motor_catalog = narrow_down_motor_catalog(refined_inertia_range, min_ave_power, filename=Default_motor_catalog)
         print("Found ", len(motor_catalog), "motors!")
         print("Found ", len(gear_catalog), "gears!!")
     elif ans == "n":

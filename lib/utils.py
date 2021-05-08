@@ -3,6 +3,7 @@ This file includes all other minor functions
 """
 import pandas as pd
 import numpy as np
+from scipy.optimize import curve_fit
 
 
 def ask_answer(question):
@@ -22,16 +23,21 @@ def load_catalog(filename):
     return catalog
 
 
-def fit_motor_efficiency():
-    motor_catalog = load_catalog("./catalog/Motor_catalog_user_defined.csv")
+def sigmoid(x, L, x0, k, b):
+    y = L / (1 + np.exp(-k * (x - x0))) + b
+    return (y)
+
+
+def fit_motor_efficiency(motor_catalog):
+    motor_catalog = load_catalog(motor_catalog)
     speed_torque_ratio_data = []
     efficiency_data = []
     motor_count = 0
     for index, row in motor_catalog.iterrows():
         if motor_count > 10:
             break
-        speed_array = np.linspace(100, row["Vn"] * row["kn"] * 1.5, 10)
-        torque_array = np.linspace(0.05, row["In"] * row["km"] * 10, 10)
+        speed_array = np.linspace(100, row["Vn"] * row["kn"] * 1, 50)
+        torque_array = np.linspace(0.05, row["In"] * row["km"] * 5, 50)
         t_s_ratio_array = np.zeros(len(speed_array) * len(torque_array))
         current_array = np.zeros(len(t_s_ratio_array))
         joule_array = np.zeros(len(t_s_ratio_array))
@@ -51,30 +57,59 @@ def fit_motor_efficiency():
         efficiency_data += list(eff_list)
         motor_count += 1
 
-    poly_coef = np.polyfit(speed_torque_ratio_data, efficiency_data, 3)
-    model = np.poly1d(poly_coef)
+    p0 = [max(efficiency_data), np.median(speed_torque_ratio_data), 1, min(efficiency_data)]  # this is an mandatory initial guess
+    popt, pcov = curve_fit(sigmoid, speed_torque_ratio_data, efficiency_data, p0, method='dogbox')
 
-    return model
+    return popt
 
 
 def num_2dec(num):
     return "{:.2f}".format(num)
 
 
-def narrow_down_catalog(key_range, key, filename, is_motor=True):
+def narrow_down_motor_catalog(inertia_range, min_ave_power, filename):
     def_cat = load_catalog(filename)
     count = 0
-    for sub_range in key_range:
-        if is_motor:
-            sub_cat = def_cat[(def_cat[key] >= sub_range[0]-200) & (def_cat[key] <= sub_range[1])]   # to include gear inertia
-        else:
-            sub_cat = def_cat[(def_cat[key] >= sub_range[0]) & (def_cat[key] <= sub_range[1])]
+    for sub_range in inertia_range:
+        sub_cat = def_cat[(def_cat["Jr"] >= sub_range[0]-200) & (def_cat["Jr"] <= sub_range[1])]   # to include gear inertia
+
         if count == 0:
             filtered_cat = sub_cat
         else:
             pd.concat([filtered_cat, sub_cat])
         count += 1
 
+    filtered_cat = def_cat[def_cat["Power"] >= min_ave_power]
+
     return filtered_cat
 
 
+def narrow_down_gear_catalog(key_range, min_peak_torque, filename):
+    def_cat = load_catalog(filename)
+    count = 0
+    for sub_range in key_range:
+        sub_cat = def_cat[(def_cat["ratio"] >= sub_range[0]) & (def_cat["ratio"] <= sub_range[1])]
+        if count == 0:
+            filtered_cat = sub_cat
+        else:
+            pd.concat([filtered_cat, sub_cat])
+        count += 1
+
+    filtered_cat = def_cat[def_cat["peak_torque"] >= min_peak_torque]
+
+    return filtered_cat
+
+
+def refine_inertia_range(m_inertia_range, gear_catalog, params):
+    max_gear_inertia = max([x["inertia"] for x in gear_catalog])
+    min_gear_inertia = min([x["inertia"] for x in gear_catalog])
+    max_ratio = max([x["ratio"] for x in gear_catalog])
+    min_ratio = min([x["ratio"] for x in gear_catalog])
+
+    refined_inertia_range = []
+    for sub_range in m_inertia_range:
+        motor_inertia_min = sub_range[0] - max_gear_inertia - params.link_inertia / min_ratio^2
+        motor_inertia_max = sub_range[1] - min_gear_inertia - params.link_inertia / max_ratio^2
+        refined_inertia_range.append([motor_inertia_min, motor_inertia_max])
+
+    return refined_inertia_range
