@@ -29,13 +29,13 @@ class Optimize4QCI(EnergyModelBase):
                                                                                  time_series=time_series)
                         motor_angle, motor_speed, motor_torque, actual_motor_eff = motor_behavior
 
-                        mechanical_power = motor_speed / 60 * np.pi * motor_torque  # speed (rpm) to (rad/s)
+                        mechanical_power = motor_speed / 60 * 2 * np.pi * motor_torque  # speed (rpm) to (rad/s)
                         electrical_power = mechanical_power / actual_motor_eff
                         # mechanical_energy = np.sum(mechanical_power) * time_step
                         electrical_power = np.clip(electrical_power, a_min=0, a_max=None)   # no-rechargable bettery
                         electrical_energy = np.sum(electrical_power) * time_step  # depend on direction of power flow
                         sum_energy += electrical_energy * activity_w
-                        ave_power += np.mean(electrical_power) * activity_w
+                        ave_power += np.mean(np.abs(electrical_power)) * activity_w
 
                     comb_info = {"energy": sum_energy, "ave_power": ave_power, "stiffness": stiffness, "ratio": ratio, "m_inertia": m_inertia}
                     all_comb_info.append(comb_info)

@@ -31,7 +31,14 @@ class OptimizeFMM(EnergyModelBase):
                         actual_motor_torque, actual_motor_speed = self.actuator.apply_voltage_current_limit(motor_torque, motor_speed, motor)
                         input_voltage, input_current = self.actuator.get_motor_inputs(actual_motor_torque, actual_motor_speed, motor)
 
-                        electrical_power = input_voltage * input_current  # speed (rpm) to (rad/s)
+                        # electrical_power = input_voltage * input_current  # speed (rpm) to (rad/s)
+                        electrical_power = np.array(len(motor_speed))
+                        for i in range(len(motor_speed)):
+                            if motor_speed[i] * des_torque[i] >= 0:
+                                electrical_power = motor_speed / 60 * 2 * np.pi * motor_torque + motor["Rw"] * input_current ** 2
+                            else:
+                                electrical_power = motor_speed / 60 * 2 * np.pi * motor_torque - motor["Rw"] * input_current ** 2
+
                         electrical_power = np.clip(electrical_power, a_min=0, a_max=None)  # no-rechargable bettery
                         electrical_energy = np.sum(electrical_power) * time_step
                         sum_energy += electrical_energy * activity_w
@@ -52,7 +59,7 @@ class OptimizeFMM(EnergyModelBase):
                     comb_info = {"energy": sum_energy, "stiffness": stiffness, "gear_name": gear['Name'],
                                  "motor_name": motor['Name'], "T_rating": ave_torque_rating, "V_rating": ave_speed_rating,
                                  "U_rating": ave_voltage_rating, "I_rating": ave_current_rating,
-                                 "motor_dia": motor["diameter"], "motor_length": motor["length"]}
+                                 "motor_dia": motor["diameter"], "motor_length": motor["length"], "gear_type": gear["type"]}
                     all_comb_info.append(comb_info)
 
         ranked_comb_info = sorted(all_comb_info, key=lambda x: x["energy"])

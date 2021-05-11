@@ -10,12 +10,12 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import numpy as np
 
-Num_rating = 6
+Num_rating = 7
 Slider_length = 220
 Fig_width = 240
 Fig_height = 150
 Performance_metrics = ["energy", "stiffness", "gear_name", "motor_name", "T_rating", "V_rating",
-                       'U_rating', 'I_rating', 'motor_dia', 'motor_length']
+                       'U_rating', 'I_rating', 'motor_dia', 'motor_length', "gear_type"]
 
 My_settings = {
         "Deactive_color": "#19aae1",
@@ -43,11 +43,11 @@ def generate_graph(base_id1=None, base_id2=None, num_act=None, settings=None):
 
 def generate_text_slide_bar(text_id=None, slider_id=None, stat_id=None, num_rating=1, max_ratings=None):
     all_comp = []
-    default_value = [max_ratings["T_rating"], max_ratings["V_rating"], max_ratings["U_rating"], max_ratings["I_rating"], 100, 80]
-    all_min = [0, 0, 0, 0, 10, 10]
-    all_max = [max_ratings["T_rating"], max_ratings["V_rating"], max_ratings["U_rating"], max_ratings["I_rating"], 120, 120]
-    all_step = [max_ratings["T_rating"] / 100, max_ratings["V_rating"] / 100, max_ratings["U_rating"] / 100, max_ratings["I_rating"] / 100, 10, 10]
-    activity_titles = ['Torque rating', 'Speed rating', 'U_rating', 'I_rating', 'Motor dia', 'Motor len']
+    default_value = [max_ratings["T_rating"], max_ratings["V_rating"], max_ratings["U_rating"], max_ratings["I_rating"], 100, 80, 2]
+    all_min = [0, 0, 0, 0, 10, 10, 0]
+    all_max = [max_ratings["T_rating"], max_ratings["V_rating"], max_ratings["U_rating"], max_ratings["I_rating"], 120, 120, 2]
+    all_step = [max_ratings["T_rating"] / 100, max_ratings["V_rating"] / 100, max_ratings["U_rating"] / 100, max_ratings["I_rating"] / 100, 10, 10, 1]
+    activity_titles = ['Torque rating', 'Speed rating', 'U_rating', 'I_rating', 'Motor dia', 'Motor len', "Gear type"]
     for i in range(num_rating):
         single_comp = html.Div(children=[
             html.P(id=text_id.format(i+1), children=activity_titles[i]),
@@ -220,7 +220,8 @@ def generate_app_layout(human_data, table_data, max_ratings):
                    Input(component_id='rating_slider3', component_property='value'),
                    Input(component_id='rating_slider4', component_property='value'),
                    Input(component_id='rating_slider5', component_property='value'),
-                   Input(component_id='rating_slider6', component_property='value')]
+                   Input(component_id='rating_slider6', component_property='value'),
+                   Input(component_id='rating_slider7', component_property='value')]
 
     datatable_input = [
                   Input(component_id='rating_slider1', component_property='value'),
@@ -228,7 +229,8 @@ def generate_app_layout(human_data, table_data, max_ratings):
                   Input(component_id='rating_slider3', component_property='value'),
                   Input(component_id='rating_slider4', component_property='value'),
                   Input(component_id='rating_slider5', component_property='value'),
-                  Input(component_id='rating_slider6', component_property='value')]
+                  Input(component_id='rating_slider6', component_property='value'),
+                  Input(component_id='rating_slider7', component_property='value')]
 
     datatable_output = [
         Output(component_id='filtered_comb_table', component_property='data')]
@@ -238,7 +240,8 @@ def generate_app_layout(human_data, table_data, max_ratings):
                    Output(component_id='rating_slider_output_container3', component_property='children'),
                    Output(component_id='rating_slider_output_container4', component_property='children'),
                    Output(component_id='rating_slider_output_container5', component_property='children'),
-                   Output(component_id='rating_slider_output_container6', component_property='children')]
+                   Output(component_id='rating_slider_output_container6', component_property='children'),
+                   Output(component_id='rating_slider_output_container7', component_property='children')]
 
     return dash_app, graph_output, graph_input, datatable_output, datatable_input, stat_output
 
